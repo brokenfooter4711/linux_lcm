@@ -1,0 +1,60 @@
+- name: Create Cloud-Init config directory
+  file:
+    path: "/tmp/{{ vm_name }}_config"
+    state: directory
+
+- name: Render user-data template
+  template:
+    src: user-data.j2
+    dest: "/tmp/{{ vm_name }}_config/user-data"
+
+- name: Create empty meta-data file
+  copy:
+    content: "instance-id: {{ vm_name }}\nlocal-hostname: {{ vm_name }}"
+    dest: "/tmp/{{ vm_name }}_config/meta-data"
+
+- name: Render network-config template
+  template:
+    src: network-config.j2
+    dest: "/tmp/{{ vm_name }}_config/network-config"
+
+- name: Remove old ISO if it exists
+  file:
+    path: "{{ image_path }}/{{ vm_name }}-cidata.iso"
+    state: absent
+  become: yes
+
+- name: Generate Cloud-Init ISO
+  command: >
+    genisoimage -output {{ image_path }}/{{ vm_name }}-cidata.iso
+    -volid cidata -joliet -rock
+    /tmp/{{ vm_name }}_config/user-data /tmp/{{ vm_name }}_config/meta-data /tmp/{{ vm_name }}_config/network-config
+
+- name: Create VM disk using backing file (Copy-on-Write)
+  command: >
+    qemu-img create -f qcow2 
+    -F qcow2 
+    -b {{ base_image_source }} 
+    {{ image_path }}/{{ vm_name }}.qcow2
+  args:
+    # This prevents overwriting an existing disk if the playbook is re-run
+    creates: "{{ image_path }}/{{ vm_name }}.qcow2"
+
+- name: Define the VM from the XML template
+  community.libvirt.virt:
+    command: define
+    xml: "{{ lookup('template', 'vm_spec.xml.j2') }}"
+    uri: "{{ libvirt_uri }}"
+
+- name: Ensure the VM is started
+  community.libvirt.virt:
+    name: "{{ vm_name }}"
+    state: running
+    uri: "{{ libvirt_uri }}"
+
+- name: Wait for VM to get an IP address
+  shell: "virsh -c qemu:///system domifaddr {{ vm_name }} --source lease | grep -oE '([0-9]{1,3}\\.){3}[0-9]{1,3}'"
+  register: vm_ip
+  until: vm_ip.stdout != ""
+  retries: 10
+  delay: 5

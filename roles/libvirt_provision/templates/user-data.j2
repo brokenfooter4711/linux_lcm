@@ -1,0 +1,22 @@
+#cloud-config
+hostname: {{ vm_name }}
+manage_etc_hosts: true
+user: {{ deploy_user | default('ansible') }}
+password: "yourpassword123"
+chpasswd: { expire: False }
+
+# Add your public key here so Ansible can SSH in
+ssh_authorized_keys:
+  - {{ lookup('file', '~/.ssh/id_ed25519.pub') }}
+
+# Ensure sudo doesn't prompt for a password during Ansible tasks
+sudo: ALL=(ALL) NOPASSWD:ALL
+
+# Preliminary package updates
+package_update: true
+packages:
+  - python3
+  - qemu-guest-agent
+
+runcmd:
+  - [ systemctl, start, qemu-guest-agent ]

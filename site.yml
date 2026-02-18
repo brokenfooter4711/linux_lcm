@@ -1,0 +1,26 @@
+---
+- name: Phase 1 - Provisioning Multiple VMs on Remote Hypervisor
+  hosts: hypervisors
+  vars:
+    base_image_source: "/data/sdc1_vol1/iso/ubuntu-24.04-minimal-cloudimg-amd64.img"
+    image_path: "/var/lib/libvirt/images"
+    libvirt_uri: "qemu:///system"
+    # Set the number of VMs you want here
+    vm_count: 3
+
+  tasks:
+    - name: Provision and Register VMs
+      # include_tasks or include_role is required for looping over multiple steps
+      include_tasks: provisioning_steps.yml
+      loop: "{{ query('sequence', 'start=1 end=' + vm_count|string + ' format=%02d') }}"
+      loop_control:
+        loop_var: vm_id
+      vars:
+        # This creates ubuntu-web-01, ubuntu-web-02, etc.
+        current_vm_name: "ubuntu-web-{{ vm_id }}"
+
+- name: Phase 2 - Configure Web Servers
+  hosts: web_vms
+  become: yes
+  roles:
+    - web_server
