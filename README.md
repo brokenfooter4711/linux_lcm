@@ -2,7 +2,7 @@
 
 # 🚀 Libvirt Lifecycle Manager (LCM)
 
-A declarative Ansible-based automation suite designed to manage the full lifecycle of virtual infrastructure on a remote hypervisor ("Debbie"). This project allows you to define a **desired state** (e.g., "I want 3 web servers") and automatically reconciles the environment by adding or removing VMs to match.
+A declarative Ansible-based automation suite designed to manage the full lifecycle of virtual infrastructure on a remote hypervisor ("hypervisor"). This project allows you to define a **desired state** (e.g., "I want 3 web servers") and automatically reconciles the environment by adding or removing VMs to match.
 
 ## 🏗 Key Features
 * **Declarative Scaling:** Simply provide the `guest_count` and the playbook calculates whether to provision new nodes or decommission excess ones.
@@ -117,3 +117,99 @@ https://console.redhat.com/insights/image-builder#tags=
 ## Future plans
 * **Expose additional settings** Many settings , such as VM Memory, Number of CPUs, and Newroking are currently hard coded and should be configurable.
 * **Integrate with Jenkins** Implement a Jenkins-driven CI/CD pipeline.
+
+## Example run
+```
+jarkko@control:~/linux_lcm$ ansible-playbook provision.yml -e "vm_count=1 name_prefix=rhel10 vm_image=/data/sdc1_vol1/iso/rhel10.0_serial_console.qcow2" -K
+BECOME password:
+
+PLAY [Declarative VM Management] ************************************************************************************************************************************
+
+TASK [Audit: Get list of existing VMs] ******************************************************************************************************************************
+ok: [hypervisor]
+
+TASK [Filter: Identify current lab VMs] *****************************************************************************************************************************
+ok: [hypervisor]
+
+TASK [Initialize Desired VM list] ***********************************************************************************************************************************
+ok: [hypervisor]
+
+TASK [Calculate: Desired VM list (only if count > 0)] ***************************************************************************************************************
+ok: [hypervisor]
+
+TASK [Calculate: Add/Remove lists] **********************************************************************************************************************************
+ok: [hypervisor]
+
+TASK [Action: Create missing VMs] ***********************************************************************************************************************************
+included: /home/jarkko/linux_lcm/lifecycle_steps.yml for hypervisor => (item=rhel10-01)
+
+TASK [Debug: Processing VM rhel10-01] *******************************************************************************************************************************
+ok: [hypervisor] => {
+    "msg": "State: present | Target: rhel10-01"
+}
+
+TASK [Shut down VM rhel10-01 from Libvirt] **************************************************************************************************************************
+skipping: [hypervisor]
+
+TASK [Undefine VM rhel10-01 from Libvirt] ***************************************************************************************************************************
+skipping: [hypervisor]
+
+TASK [Delete Disk Images for rhel10-01] *****************************************************************************************************************************
+skipping: [hypervisor]
+
+TASK [Delete Cloud-Init ISO for rhel10-01] **************************************************************************************************************************
+skipping: [hypervisor]
+
+TASK [Run Provisioning Role] ****************************************************************************************************************************************
+
+TASK [libvirt_provision : Create Cloud-Init config directory] *******************************************************************************************************
+changed: [hypervisor]
+
+TASK [libvirt_provision : Render user-data template] ****************************************************************************************************************
+changed: [hypervisor]
+
+TASK [libvirt_provision : Create empty meta-data file] **************************************************************************************************************
+changed: [hypervisor]
+
+TASK [libvirt_provision : Render network-config template] ***********************************************************************************************************
+changed: [hypervisor]
+
+TASK [libvirt_provision : Remove old ISO if it exists] **************************************************************************************************************
+ok: [hypervisor]
+
+TASK [libvirt_provision : Generate Cloud-Init ISO] ******************************************************************************************************************
+changed: [hypervisor]
+
+TASK [libvirt_provision : Cleanup: Remove temporary Cloud-Init source files] ****************************************************************************************
+changed: [hypervisor] => (item=/tmp/rhel10-01_config/user-data)
+changed: [hypervisor] => (item=/tmp/rhel10-01_config/meta-data)
+changed: [hypervisor] => (item=/tmp/rhel10-01_config/network-config)
+changed: [hypervisor] => (item=/tmp/rhel10-01_config)
+
+TASK [libvirt_provision : Create VM disk using backing file (Copy-on-Write)] ****************************************************************************************
+changed: [hypervisor]
+
+TASK [libvirt_provision : Define the VM from the XML template] ******************************************************************************************************
+changed: [hypervisor]
+
+TASK [libvirt_provision : Ensure the VM is started] *****************************************************************************************************************
+changed: [hypervisor]
+
+TASK [libvirt_provision : Wait for VM to get an IP address] *********************************************************************************************************
+FAILED - RETRYING: [hypervisor]: Wait for VM to get an IP address (10 retries left).
+FAILED - RETRYING: [hypervisor]: Wait for VM to get an IP address (9 retries left).
+FAILED - RETRYING: [hypervisor]: Wait for VM to get an IP address (8 retries left).
+changed: [hypervisor]
+
+TASK [Wait for rhel10-01 to get an IP] ******************************************************************************************************************************
+changed: [hypervisor]
+
+TASK [Add rhel10-01 to dynamic inventory] ***************************************************************************************************************************
+changed: [hypervisor]
+
+TASK [Action: Remove excess VMs] ************************************************************************************************************************************
+skipping: [hypervisor]
+
+PLAY RECAP **********************************************************************************************************************************************************
+hypervisor                     : ok=22   changed=12   unreachable=0    failed=0    skipped=5    rescued=0    ignored=0
+```
