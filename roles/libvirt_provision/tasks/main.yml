@@ -30,6 +30,16 @@
     -volid cidata -joliet -rock
     /tmp/{{ vm_name }}_config/user-data /tmp/{{ vm_name }}_config/meta-data /tmp/{{ vm_name }}_config/network-config
 
+- name: "Cleanup: Remove temporary Cloud-Init source files"
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/tmp/{{ vm_name }}_config/user-data"
+    - "/tmp/{{ vm_name }}_config/meta-data"
+    - "/tmp/{{ vm_name }}_config/network-config"
+    - "/tmp/{{ vm_name }}_config"
+
 - name: Create VM disk using backing file (Copy-on-Write)
   command: >
     qemu-img create -f qcow2 

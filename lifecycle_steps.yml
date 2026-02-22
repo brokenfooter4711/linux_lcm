@@ -1,0 +1,67 @@
+---
+# --- PRE-FLIGHT CHECK ---
+- name: "Debug: Processing VM {{ current_vm_name }}"
+  debug:
+    msg: "State: {{ infra_state }} | Target: {{ current_vm_name }}"
+
+# --- DESTRUCTION BLOCK ---
+- name: "Teardown {{ current_vm_name }}"
+  when: infra_state == 'absent'
+  block:
+    - name: "Shut down VM {{ current_vm_name }} from Libvirt"
+      community.libvirt.virt:
+        name: "{{ current_vm_name }}"
+        command: destroy # Force stop
+        state: destroyed
+      ignore_errors: yes
+
+    - name: "Undefine VM {{ current_vm_name }} from Libvirt"
+      community.libvirt.virt:
+        name: "{{ current_vm_name }}"
+        command: undefine
+        force: true
+      ignore_errors: yes
+
+    - name: "Delete Disk Images for {{ current_vm_name }}"
+      file:
+        path: "{{ image_path }}/{{ current_vm_name }}.qcow2"
+        state: absent
+
+    - name: "Delete Cloud-Init ISO for {{ current_vm_name }}"
+      file:
+        path: "{{ image_path }}/{{ current_vm_name }}-cidata.iso"
+        state: absent
+
+# --- PROVISION BLOCK ---
+
+- name: "Provision {{ current_vm_name }}"
+  when: infra_state == 'present'
+  block:
+    # Run the existing role with the iterated name 
+    - name: Run Provisioning Role
+      include_role:
+        name: libvirt_provision
+      vars:
+        vm_name: "{{ current_vm_name }}"
+
+    # Get the IP for THIS specific VM
+    - name: "Wait for {{ current_vm_name }} to get an IP"
+      shell: "virsh -c {{ libvirt_uri }} domifaddr {{ current_vm_name }} --source lease | grep -oE '([0-9]{1,3}\\.){3}[0-9]{1,3}'"
+      register: vm_ip
+      until: vm_ip.stdout != ""
+      retries: 25
+      delay: 10
+
+    # Add to inventory with a unique alias
+    - name: "Add {{ current_vm_name }} to dynamic inventory"
+      add_host:
+        name: "{{ vm_ip.stdout }}"
+        groups: web_vms
+        ansible_user: ansible
+        vm_hostname: "{{ current_vm_name }}"
+        # The '>' tells YAML to treat the following block as a single string
+        ansible_ssh_common_args: >
+          -o StrictHostKeyChecking=no 
+          -o UserKnownHostsFile=/dev/null
+          -o ProxyCommand="ssh -W %h:%p -i ~/.ssh/id_ed25519_popos 
+          {{ hostvars[groups['hypervisors'][0]].ansible_user }}@{{ hostvars[groups['hypervisors'][0]].ansible_host }}"

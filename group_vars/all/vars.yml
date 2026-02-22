@@ -1,0 +1,23 @@
+---
+# Publicly visible infrastructure variables
+ansible_user: ansible
+
+# Infrastructure State
+infra_state: "{{ state | default('present') }}"
+
+# Scaling & Naming
+guest_count: 1
+vm_count: "{{ guest_count | int }}"
+vm_group_prefix: "{{ group_prefix | default('ubuntu-web') }}"
+vm_name_prefix: "{{ name_prefix | default('ubuntu-web') }}"
+
+# Templates & Images
+base_image_source: "{{ vm_image | default('/data/sdc1_vol1/iso/ubuntu-24.04-minimal-cloudimg-amd64.img') }}"
+vm_template: "{{ spec_template | default('vm_spec.xml.j2') }}"
+
+# Paths & URI
+image_path: "/var/lib/libvirt/images"
+libvirt_uri: "qemu:///system"
+
+# The string from your ~/.ssh/id_ed25519_popos.pub
+ssh_public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG4z8BzWK4N5gdEnyehunQmfKGymGQZGJJmTPrONLScP jarkko@debbie"

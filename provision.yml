@@ -1,0 +1,57 @@
+---
+- name: Declarative VM Management
+  hosts: hypervisors
+  gather_facts: no
+
+  tasks:
+    - name: "Audit: Get list of existing VMs"
+      community.libvirt.virt:
+        command: list_vms
+      register: existing_vms
+      become: yes
+
+    - name: "Filter: Identify current lab VMs"
+      set_fact:
+        current_lab_vms: "{{ existing_vms.list_vms | select('match', '^' + vm_name_prefix + '-\\d+') | list | sort }}"
+
+    - name: "Initialize Desired VM list"
+      set_fact:
+        desired_vms: []
+
+    - name: "Calculate: Desired VM list (only if count > 0)"
+      set_fact:
+        desired_vms: "{{ query('sequence', 'start=1 end=' + vm_count|string + ' format=' + vm_name_prefix + '-%02d') }}"
+      when: vm_count | int >= 1
+
+    - name: "Calculate: Add/Remove lists"
+      set_fact:
+        # Items in 'desired' but NOT in 'current'
+        vms_to_add: "{{ desired_vms | difference(current_lab_vms) }}"
+        # Items in 'current' but NOT in 'desired'
+        vms_to_remove: "{{ current_lab_vms | difference(desired_vms) }}"
+
+    - name: "Debug: Show raw Libvirt VM list"
+      debug:
+        var: existing_vms.list_vms
+
+    - name: "Debug: Show filtered lab VMs"
+      debug:
+        var: current_lab_vms
+
+    - name: "Action: Create missing VMs"
+      include_tasks: lifecycle_steps.yml
+      loop: "{{ vms_to_add | from_yaml }}" # Forces string back to list
+      loop_control:
+        loop_var: current_vm_name
+      when: (vms_to_add | from_yaml) | length > 0
+      vars:
+        infra_state: "present"
+
+    - name: "Action: Remove excess VMs"
+      include_tasks: lifecycle_steps.yml
+      loop: "{{ vms_to_remove | from_yaml }}" # Forces string back to list
+      loop_control:
+        loop_var: current_vm_name
+      when: (vms_to_remove | from_yaml) | length > 0
+      vars:
+        infra_state: "absent"

@@ -26,7 +26,7 @@
     </disk>
 
     <interface type='network'>
-      <source network='{{ libvirt_network | default("default") }}'/>
+      <source network='default'/>
       <model type='virtio'/>
       <driver name='vhost'/>
     </interface>
