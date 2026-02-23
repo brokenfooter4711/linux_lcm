@@ -19,5 +19,5 @@ vm_template: "{{ spec_template | default('vm_spec.xml.j2') }}"
 image_path: "/var/lib/libvirt/images"
 libvirt_uri: "qemu:///system"
 
-# The string from your ~/.ssh/id_ed25519_popos.pub
-ssh_public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG4z8BzWK4N5gdEnyehunQmfKGymGQZGJJmTPrONLScP jarkko@debbie"
+# Add ssh public key here to add it to the provisioned VMs
+ssh_public_key: ""

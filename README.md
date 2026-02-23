@@ -111,14 +111,16 @@ results in:
 ```
 
 ## Useful links
-Redhat Enterprise Linux Image builder:
-https://console.redhat.com/insights/image-builder#tags=
+Ubuntu Cloud Images: https://cloud-images.ubuntu.com/
+Redhat Enterprise Linux Image builder: https://console.redhat.com/insights/image-builder#tags=
 
 ## Future plans
-* **Expose additional settings** Many settings , such as VM Memory, Number of CPUs, and Newroking are currently hard coded and should be configurable.
-* **Integrate with Jenkins** Implement a Jenkins-driven CI/CD pipeline.
+* **Expose additional settings:** Many settings, such as VM Memory, Number of CPUs, and Networking are currently hard coded and should be configurable.
+* **Additional VM Templates:** Add additional templates to allow further customization of provisioned VMs.
+* **Integrate with Jenkins:** Implement a Jenkins-driven CI/CD pipeline.
 
 ## Example run
+This example shows the complete run when provisioning a VM.
 ```
 jarkko@control:~/linux_lcm$ ansible-playbook provision.yml -e "vm_count=1 name_prefix=rhel10 vm_image=/data/sdc1_vol1/iso/rhel10.0_serial_console.qcow2" -K
 BECOME password:

@@ -2,15 +2,15 @@
 hostname: {{ vm_name }}
 manage_etc_hosts: true
 user: {{ deploy_user | default('ansible') }}
-#password: "yourpassword123"
-#chpasswd: { expire: False }
 
 # Add your public key here so Ansible can SSH in
 ssh_authorized_keys:
   - {{ ssh_public_key }}
 
-# Ensure sudo doesn't prompt for a password during Ansible tasks
+# Decide if sudo prompts for a password during Ansible tasks. 
+# Choose configuration based on if "-ask-become-pass" is used
 sudo: ALL=(ALL) NOPASSWD:ALL
+# sudo ALL=(ALL) ALL
 
 # Preliminary package updates
 package_update: true
